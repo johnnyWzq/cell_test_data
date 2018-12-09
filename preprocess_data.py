@@ -20,6 +20,15 @@ def calc_other_vectors(df):
     #计算i/dv
     """
     df['dqdv'] = df['current'] / df['voltage'].diff()
+    if (df['current'].mean(skipna=True)) > 0: #充电
+        df['c'] = df['charge_c']
+        df['e'] = df['charge_e']
+    elif (df['current'].mean(skipna=True)) < 0: #放电
+        df['c'] = df['discharge_c']
+        df['e'] = df['discharge_e']
+    else:
+        df['c'] = 0
+        df['e'] = 0
     return df
 
 def slip_data(df):
@@ -94,6 +103,8 @@ def transfer_data(cnt, cur_df):
     df.loc[cnt, 'start_time'] = cur_df['time'].iloc[0]
     df.loc[cnt, 'end_time'] = cur_df['time'].iloc[-1]
     df.loc[cnt, 'data_num'] = len(cur_df)
+    df.loc[cnt, 'c'] = cur_df['c'].iloc[-1]
+    df.loc[cnt, 'e'] = cur_df['e'].iloc[-1]
     
     for col_name in cur_df.columns:
         for fix in ['voltage', 'current', 'dqdv']:
@@ -102,6 +113,8 @@ def transfer_data(cnt, cur_df):
                 cal_stat_row(cnt, cur_df[col_name].diff(), col_name + '_diff', df)
                 cal_stat_row(cnt, cur_df[col_name].diff().diff(), col_name + '_diff2', df)
                 cal_stat_row(cnt, cur_df[col_name].diff() / cur_df[col_name], col_name + '_diffrate', df)
+        if 'temperature' in col_name:
+            cal_stat_row(cnt, cur_df[col_name], col_name, df)
     return df
 
 def cal_stat_row(cnt, ser, col_name, df):
@@ -121,7 +134,7 @@ def cal_stat_row(cnt, ser, col_name, df):
 def main():
     data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '11'
+    cell_no = '12'
     temperature = '25'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)

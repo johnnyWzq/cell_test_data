@@ -46,7 +46,10 @@ def read_data(data_dir, cell_no='14', temperature='25'):
         regx = r'LG36-%sdu-[0-9a-zA-Z\_]+-[0-9a-zA-Z]+-[0-9a-zA-Z]+-[0-9a-zA-Z]+-%s.\w+'\
                 %(temperature, cell_no)
         data = read_excel_files(data_dir, regx)
-        data['temperature'] = int(temperature)
+        if 'Temperature (C)_1' in data.columns:
+            data = data.rename(columns = {'Temperature (C)_1': 'temperature'})
+        else:
+            data['temperature'] = int(temperature)
         return data
     else:
         print("There isn't such a path.")
