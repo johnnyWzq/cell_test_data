@@ -5,104 +5,113 @@ Created on Fri Dec  7 10:00:21 2018
 
 @author: wuzhiqiang
 """
-import sys
+print(__doc__)
+import read_data as ppd
 import os
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import time
 from dateutil import parser
-from read_data import save_data_csv
 
-def preprocess_data(data_dir, filename):
+def calc_other_vectors(df):
+    """
+    #计算dq/dv值
+    #由于没有dq值，因此使用i代替
+    #计算i/dv
+    """
+    df['dqdv'] = df['current'] / df['voltage'].diff()
+    return df
+
+def slip_data(df):
+    """
+    """
+    PROCESS_GAP = 10 #10points,10sec
+    PROCESSING_GAP = 10
+    data0 = pd.DataFrame()
+    for value in set(df['step_no'].tolist()):#到所有都处理完了最后再做一次排序
+        idx = df[df['step_no'] == value].index
+        data = pd.DataFrame()
+        j_last = 0
+        cnt = 0
+        for j in range(1, len(idx) + 1):
+            if j >= len(idx) or idx[j] - idx[j - 1] > PROCESS_GAP:    
+                cur_df = df.loc[idx[j_last]:idx[j-1]] #idx[x]代表df的index值,所以用loc
+                print('clip %d : j: %d -> %d, the length of cur_df: %d.'
+                      %(cnt, idx[j_last], idx[j-1], len(cur_df)))
+                j_last = j
+                if len(cur_df) < PROCESSING_GAP:
+                    continue
+                cur_df = calc_other_vectors(cur_df)
+                data = data.append(transfer_data(cnt, cur_df))
+                cnt += 1
+        data0 = data0.append(data)
+    return data0
+                
+def preprocess_data(data_dir, filename, data0=None):
     """
     将预处理后的数据按一次充电过程进行分割合并
     """
-    CHARGE_TIMEGAP = 300  # 300 seconds = 5 minutes
-    CHARGING_TIMEGAP = 60
-    CA_KWH_UB = 350.0
     DROPNA_THRESH = 5
-    
-    file = os.path.join(p_data_dir, filename)
-    start = time.time()
-    data = pd.read_csv(file+'.csv', encoding='gb18030')
-    end = time.time()
-    print('Done, it took %d seconds to read the data.'%(end-start))
+    if data0 is None:
+        file = os.path.join(data_dir, filename)
+        start = time.time()
+        data0 = pd.read_csv(file+'.csv', encoding='gb18030')
+        end = time.time()
+        print('Done, it took %d seconds to read the data.'%(end-start))
     
     #filt samples on rows, if a row has too few none-nan value, drop it
-    data = data.dropna(thresh=DROPNA_THRESH)
-    
-     # group by bms_id and sort by time
-    data_gp = data.groupby('bms_id')
-    #data = pd.DataFrame(columns=['bms_id', 'start_time', 'end_time',
-    #                             'charger_id', 'data_num'])
+    data0 = data0.dropna(thresh=DROPNA_THRESH)
     data = pd.DataFrame()
-    cnt = 0
-    num = 0
-    print('The numbers of the data clips is: %d'%len(processed_data_gp.groups))
-    for i in processed_data_gp.groups:
-        df = processed_data_gp.get_group(i) #第i组
-        print('NO.%d: '%num, i, df.shape, cnt)
-        num += 1
-        df = df.sort_values('time')
-        j_last = 0
-        for j in range(1, len(df) + 1):
-            if j >= len(df) or (df.iloc[j]['time'] - df.iloc[j - 1]['time']).seconds > CHARGE_TIMEGAP:
-                    
-                if j >= len(df):
-                    cur_df = df.iloc[j_last:]
-                elif (df.iloc[j]['time'] - df.iloc[j - 1]['time']).seconds > CHARGE_TIMEGAP:
-                    cur_df = df.iloc[j_last:j]
-                    #j_last = j
 
-                func = lambda x: x.fillna(method='ffill').fillna(method='bfill').dropna()
-                cur_df = func(cur_df)
-                
-                print('clip %d : j: %d -> %d, the length of cur_df: %d.'
+    #regular the cycle_no
+    temp = data0[['cycle_no']]
+    j_last = 0
+    cnt = 0  
+    for j in range(1, len(temp) + 1):
+        if j >= len(temp) or temp['cycle_no'].iloc[j] < temp['cycle_no'].iloc[j - 1]:#下一个实验的循环计数开始
+            if j_last == 0:
+                bias = 0
+            else:
+                bias = data0['cycle_no'].iloc[j_last - 1]
+            cur_df = data0.iloc[j_last:j]  
+            cur_df['cycle_no'] = cur_df['cycle_no'] + bias      
+            print('clip %d : j: %d -> %d, the length of cur_df: %d.'
                       %(cnt, j_last, j, len(cur_df)))
-                #print('j:', j_last, '->', j, 'len(cur_df):', tmp_len, '->', len(cur_df), 'cnt=', cnt)
-                j_last = j
-                if len(cur_df) <= 0 or (cur_df['time'].iloc[-1] - cur_df['time'].iloc[0]).seconds < CHARGING_TIMEGAP:
-                    continue
-                cur_df['score_ca_kwh'] = cur_df['cp_kwh'].diff() / cur_df['bp_soc'].diff() * 100
-                cur_df['score_ca_ah'] = cur_df['cp_ah'].diff() / cur_df['bp_soc'].diff() * 100
-                cur_df['score_ca_health'] = cur_df['health']
-                
-                data = data.append(transfer_data(cnt, i, cur_df))
-                cnt += 1
-
+            j_last = j
+            data = data.append(slip_data(cur_df))
+    data['start_time'] = data['start_time'].apply(lambda x: parser.parse(x))
+    data = data.sort_values('start_time')
+    #data['start_time'] = data['start_time'].apply(str)
+    data = data.reset_index(drop=True)
     return data
 
-def transfer_data(cnt, bms_id, cur_df):
+def transfer_data(cnt, cur_df):
     """
     将2维的df转换为1维
     """
-    df = pd.DataFrame(columns=['bms_id', 'start_time', 'end_time',
-                                 'charger_id', 'data_num'])
-    df.loc[cnt, 'bms_id'] = bms_id
+    df = pd.DataFrame(columns=['start_time', 'end_time',
+                               'data_num'])
     df.loc[cnt, 'start_time'] = cur_df['time'].iloc[0]
     df.loc[cnt, 'end_time'] = cur_df['time'].iloc[-1]
-    df.loc[cnt, 'charger_id'] = cur_df['charger_id'].iloc[0]
     df.loc[cnt, 'data_num'] = len(cur_df)
     
     for col_name in cur_df.columns:
-        for fix in ['bi_']:
+        for fix in ['voltage', 'current', 'dqdv']:
             if fix in col_name:
-                df.loc[cnt, col_name + '_mean'] = cur_df[cur_df[col_name] > 0][col_name].mean(skipna=True)#选择col_name大于0的行并求平均值
-        for fix in ['score_']:
-            if fix in col_name:
-                cal_stat(cnt, cur_df[col_name], col_name, df)
-        for fix in ['cp_', 'bp_', '_sv', '_st']:
-            if fix in col_name:
-                cal_stat(cnt, cur_df[col_name], col_name, df)
-                cal_stat(cnt, cur_df[col_name].diff().abs(), col_name + '_diff', df)
-                cal_stat(cnt, cur_df[col_name].diff().diff().abs(), col_name + '_diff2', df)
-                cal_stat(cnt, cur_df[col_name].diff().abs() / cur_df[col_name], col_name + '_diffrate', df)
+                cal_stat_row(cnt, cur_df[col_name], col_name, df)
+                cal_stat_row(cnt, cur_df[col_name].diff(), col_name + '_diff', df)
+                cal_stat_row(cnt, cur_df[col_name].diff().diff(), col_name + '_diff2', df)
+                cal_stat_row(cnt, cur_df[col_name].diff() / cur_df[col_name], col_name + '_diffrate', df)
     return df
 
-def cal_stat(cnt, ser, col_name, df):
+def cal_stat_row(cnt, ser, col_name, df):
     """
     求统计值
     """
+    func = lambda x: x.fillna(method='ffill').fillna(method='bfill').dropna()
+    ser = ser.replace(np.inf, np.nan)
+    ser = ser.replace(-np.inf, np.nan)
+    ser = func(ser)
     df.loc[cnt, col_name + '_mean'] = ser.mean(skipna=True)
     df.loc[cnt, col_name + '_min'] = ser.min(skipna=True)
     df.loc[cnt, col_name + '_max'] = ser.max(skipna=True)
@@ -110,14 +119,19 @@ def cal_stat(cnt, ser, col_name, df):
     df.loc[cnt, col_name + '_std'] = ser.std(skipna=True)
     
 def main():
+    data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '14'
+    cell_no = '11'
     temperature = '25'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
-    
+    #"""
+    data_ori = ppd.read_data(data_ori_dir, cell_no, temperature)
+    data = ppd.clean_data(data_ori)
+    ppd.save_data_csv(data, filename, data_dir, 500000)
+    #"""
     data = preprocess_data(data_dir, filename)
-    save_data_csv(data, 'processed'+filename, data_dir)
+    ppd.save_data_csv(data, 'processed_'+filename, data_dir)
     
 if __name__ == '__main__':
     main()

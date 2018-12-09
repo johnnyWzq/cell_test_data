@@ -10,6 +10,7 @@ print(__doc__)
 import os
 import re
 import time
+from dateutil import parser
 import pandas as pd
 
 def read_excel(filename):
@@ -62,16 +63,21 @@ def clean_data(data):
         print('The data is None.')
         return None
     print('cleaning cell data...')
-    data = data.rename(columns = {'Test_Time(s)': 'timestamp', 'Step_Index': 'step_no',
+    data = data.rename(columns = {'Test_Time(s)': 'timestamp', 'Date_Time': 'time',
+                                  'Step_Index': 'step_no', 'Cycle_Index': 'cycle_no',
                                   'Current(A)': 'current', 'Voltage(V)': 'voltage',
                                   'Charge_Capacity(Ah)': 'charge_c',
                                   'Discharge_Capacity(Ah)': 'discharge_c',
                                   'Charge_Energy(Wh)': 'charge_e', 'Discharge_Energy(Wh)': 'discharge_e',
                                   'dV/dt(V/s)': 'dv/dt'})
-    data = data[['timestamp', 'current', 'voltage', 'charge_c', 'discharge_c',
+    data = data[['timestamp', 'time', 'cycle_no', 'step_no', 'current', 'voltage',
+                 'charge_c', 'discharge_c',
                  'charge_e', 'discharge_e', 'dv/dt', 'temperature']]
     data = data.dropna()
-    data = data.sort_index()
+    data['time'] = data['time'].apply(str)
+    data['time'] = data['time'].apply(lambda x: parser.parse(x))
+    data = data.sort_values('time')
+    data['time'] = data['time'].apply(str)
     return data
     
 def save_data_xlsx(data, max_lens, filename, output_dir=None):
@@ -105,7 +111,8 @@ def save_data_csv(data, filename, output_dir=None, max_lens=None):
     elif output_dir:
         start = time.time()
         data.to_csv(os.path.join(output_dir, '%s.csv'%filename), chunksize=max_lens,
-                    encoding='gb18030')
+                    index=False, index_label=False, encoding='gb18030')
+        #data[:70000].to_csv(os.path.join(output_dir, 'test_%s.csv'%filename), index=False, index_label=False, encoding='gb18030')
         print('The whole data has been saved.')
         end = time.time()
         print('Done, it took %d seconds to save the data.'%(end-start))
@@ -116,6 +123,7 @@ def test(p_data_dir, filename):
     data = pd.read_csv(file+'.csv', encoding='gb18030')
     end = time.time()
     print('Done, it took %d seconds to read the data.'%(end-start))
+    print(data.shape)
     """
     start = time.time()
     data = pd.read_excel(file+'.xlsx', encoding='gb18030')
@@ -131,10 +139,10 @@ def main():
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
     #test(p_data_dir, filename)
-    """
+    
     data_ori = read_data(data_dir, cell_no, temperature)
     data = clean_data(data_ori)
-    save_data_csv(data, filename, p_data_dir, 100000)
-    """
+    save_data_csv(data, filename, p_data_dir, 500000)
+    
 if __name__ == '__main__':
     main()
