@@ -134,8 +134,8 @@ def cal_stat_row(cnt, ser, col_name, df):
 def main():
     data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '12'
-    temperature = '25'
+    cell_no = '28'
+    temperature = '35'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
     #"""
