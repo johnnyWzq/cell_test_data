@@ -92,6 +92,8 @@ def preprocess_data(data_dir, filename, data0=None):
     data = data.sort_values('start_time')
     #data['start_time'] = data['start_time'].apply(str)
     data = data.reset_index(drop=True)
+    data = add_ocv_c(data)
+    
     return data
 
 def transfer_data(cnt, cur_df):
@@ -131,18 +133,29 @@ def cal_stat_row(cnt, ser, col_name, df):
     df.loc[cnt, col_name + '_median'] = ser.median(skipna=True)
     df.loc[cnt, col_name + '_std'] = ser.std(skipna=True)
     
+def add_ocv_c(data):
+    """
+    #静置时c等于上一次充/放电容量与后一次充/放电容量的均值
+    #第一次及最后一次不计算
+    """
+    data = data.drop(index=0, axis=1).drop(index=len(data)-1, axis=1)
+    for i in data[data['c'] == 0].index:
+        data['c'].loc[i] = 0.5 * (data['c'].loc[i-1] + data['c'].loc[i+1])
+        data['e'].loc[i] = 0.5 * (data['e'].loc[i-1] + data['e'].loc[i+1])
+    return data
+
 def main():
     data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '28'
-    temperature = '35'
+    cell_no = '15'
+    temperature = '25'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
-    #"""
+    """
     data_ori = ppd.read_data(data_ori_dir, cell_no, temperature)
     data = ppd.clean_data(data_ori)
     ppd.save_data_csv(data, filename, data_dir, 500000)
-    #"""
+    """
     data = preprocess_data(data_dir, filename)
     ppd.save_data_csv(data, 'processed_'+filename, data_dir)
     
