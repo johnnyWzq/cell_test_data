@@ -120,6 +120,26 @@ def save_data_csv(data, filename, output_dir=None, max_lens=None):
         end = time.time()
         print('Done, it took %d seconds to save the data.'%(end-start))
     
+def save_workstate_data(regx, data_dir):
+    temp = []
+    start = time.time()
+    for filename in os.listdir(data_dir):#获取文件夹内所有文件名
+        if re.match(regx, filename):
+            print('---------------------------------------')
+            print(filename)
+            temp.append(pd.read_csv(os.path.join(data_dir, filename),
+                                    encoding='gb18030'))
+    temp = pd.concat(tuple(temp), ignore_index=True)
+    print('data shape: ' + temp.shape.__str__())
+    end = time.time()
+    print('Done, it took %d seconds to read the data.'%(end-start))
+    data = temp[temp['current_mean'] == 0].reset_index(drop=True) #静置数据
+    save_data_csv(data, 'processed_rest_data', data_dir)
+    data = temp[temp['current_mean'] > 0].reset_index(drop=True) #充电数据
+    save_data_csv(data, 'processed_charge_data', data_dir)
+    data = temp[temp['current_mean'] < 0].reset_index(drop=True) #放电数据
+    save_data_csv(data, 'processed_discharge_data', data_dir)
+    
 def test(p_data_dir, filename):
     file = os.path.join(p_data_dir, filename)
     start = time.time()

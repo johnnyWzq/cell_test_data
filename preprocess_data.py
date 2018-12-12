@@ -145,19 +145,22 @@ def add_ocv_c(data):
     return data
 
 def main():
-    data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '15'
-    temperature = '25'
+    cell_no = '29'
+    temperature = '35'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
     """
+    data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_ori = ppd.read_data(data_ori_dir, cell_no, temperature)
     data = ppd.clean_data(data_ori)
     ppd.save_data_csv(data, filename, data_dir, 500000)
     """
+    """
     data = preprocess_data(data_dir, filename)
     ppd.save_data_csv(data, 'processed_'+filename, data_dir)
+    """
+    ppd.save_workstate_data(r'processed_LG36-\d+-\d+_\d-\d+.csv', data_dir)
     
 if __name__ == '__main__':
     main()
