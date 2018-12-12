@@ -15,6 +15,7 @@ Created on Sat May  5 19:33:14 2018
 """
 
 import pandas as pd
+import numpy as np
 import os
 from sklearn.model_selection import cross_validate
 from sklearn.metrics import explained_variance_score
@@ -23,6 +24,39 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 from sklearn.externals import joblib
 from sklearn import tree
+from sklearn import preprocessing
+
+def select_feature(data_x, data_y, feature_num=40, method='f_regression'):
+    features_chosen = data_x.columns
+    feature_num = min(len(features_chosen), feature_num)
+    
+     # standardize
+    data_x = pd.DataFrame(data=preprocessing.scale(data_x.values, axis=0), columns=data_x.columns)
+    #根据特征工程的方法选择特征参数数量
+    from sklearn.feature_selection import SelectKBest
+    from sklearn.feature_selection import f_regression
+    from sklearn.decomposition import PCA
+    from sklearn.feature_selection import mutual_info_regression
+    
+    if method == 'f_regression' or method == 'mutual_info_regression':
+        if method == 'f_regression':
+            select_model = SelectKBest(f_regression, k=feature_num)
+        else:
+            select_model = SelectKBest(mutual_info_regression, k=feature_num)
+        select_model.fit(data_x.values, data_y.values.ravel())
+        feature_mask = select_model.get_support(indices=True)
+        feature_chosen = data_x.columns[feature_mask]
+        print('feature_chosen: ', feature_chosen)
+        data_x = data_x[feature_chosen]
+    elif method == 'PCA':
+        pca_model = PCA(n_components=feature_num)
+        data_x_pc = pca_model.fit(data_x.values).transform(data_x.values)
+        data_x = pd.DataFrame(data=data_x_pc,
+                      columns=['PCA_' + str(i) for i in range(feature_num)])
+    else:
+        raise Exception('In select_feature(): invalid parameter method.')
+    
+    return data_x
 
 def evaluate(model, X, trueY):
     """
@@ -98,9 +132,7 @@ def save_model(model, feature_name, pkl_dir, depth=None):
     get_model_name = lambda x:x[0:x.find('(')]
     model_name = get_model_name(str(model))
     joblib.dump(model, os.path.join(pkl_dir, model_name+'.pkl')) 
-    
-    draw_model_list = ['DecisionTreeRegressor', 'GradientBoostingRegressor',
-                       'RandomForestRegressor']
+
     if depth == None:
         depth = 'x'
     if model_name == 'DecisionTreeRegressor':
@@ -112,3 +144,20 @@ def save_model(model, feature_name, pkl_dir, depth=None):
     elif model_name == 'RandomForestRegressor':
         tree.export_graphviz(model.estimators_[0], os.path.join(pkl_dir, 'rf_depth%s.dot'%str(depth)),
                              feature_names=feature_name, max_depth=3)
+        
+def load_model(model_name):
+    model = joblib.load(model_name)
+    return model
+
+def valid_model(model, data_x, data_y, feature_method, feature_num=40):
+    data_x = select_feature(data_x, data_y, method=feature_method, feature_num=feature_num)
+    
+    # start building model
+    np_x = np.nan_to_num(data_x.values)
+    np_y = np.nan_to_num(data_y.values)
+    print('train_set.shape=%s, test_set.shape=%s' %(np_x.shape, np_y.shape))
+    eva2 = evaluate(model, np_x, np_y)
+    print('evaluation result of validation set: \n', eva2)
+    print('----------------------------------------')
+    res = pd.DataFrame({'test:true_y': np_y, 'test:pred_y': model.predict(np_x)})
+    return res
