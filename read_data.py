@@ -12,6 +12,7 @@ import re
 import time
 from dateutil import parser
 import pandas as pd
+import sql_operation as sql
 
 def read_excel(filename):
     print('reading a excel file...')
@@ -66,21 +67,21 @@ def clean_data(data):
         print('The data is None.')
         return None
     print('cleaning cell data...')
-    data = data.rename(columns = {'Test_Time(s)': 'timestamp', 'Date_Time': 'time',
+    data = data.rename(columns = {'Test_Time(s)': 'timestamp', 'Date_Time': 'stime',
                                   'Step_Index': 'step_no', 'Cycle_Index': 'cycle_no',
                                   'Current(A)': 'current', 'Voltage(V)': 'voltage',
                                   'Charge_Capacity(Ah)': 'charge_c',
                                   'Discharge_Capacity(Ah)': 'discharge_c',
                                   'Charge_Energy(Wh)': 'charge_e', 'Discharge_Energy(Wh)': 'discharge_e',
                                   'dV/dt(V/s)': 'dv/dt'})
-    data = data[['timestamp', 'time', 'cycle_no', 'step_no', 'current', 'voltage',
+    data = data[['timestamp', 'stime', 'cycle_no', 'step_no', 'current', 'voltage',
                  'charge_c', 'discharge_c',
                  'charge_e', 'discharge_e', 'dv/dt', 'temperature']]
     data = data.dropna()
-    data['time'] = data['time'].apply(str)
-    data['time'] = data['time'].apply(lambda x: parser.parse(x))
-    data = data.sort_values('time')
-    data['time'] = data['time'].apply(str)
+    data['stime'] = data['stime'].apply(str)
+    data['stime'] = data['stime'].apply(lambda x: parser.parse(x))
+    data = data.sort_values('stime')
+    data['stime'] = data['stime'].apply(str)
     return data
     
 def save_data_xlsx(data, max_lens, filename, output_dir=None):
@@ -119,6 +120,14 @@ def save_data_csv(data, filename, output_dir=None, max_lens=None):
         print('The whole data has been saved.')
         end = time.time()
         print('Done, it took %d seconds to save the data.'%(end-start))
+        
+def save_data_sql(data, config, table_name, if_exists='replace'):
+    if data.empty != True:
+        host, user, password, db, port =config['s'], config['u'],\
+                                    config['p'], config['db'], config['port']
+        engine = sql.create_sql_engine(db, user, password, host, port)
+        dtypedict = sql.mapping_df_types(data)
+        data.to_sql(table_name, engine, if_exists=if_exists, dtype=dtypedict)
     
 def save_workstate_data(regx, data_dir):
     temp = []

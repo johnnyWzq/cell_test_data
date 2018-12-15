@@ -24,16 +24,16 @@ from sklearn.ensemble import GradientBoostingRegressor
 def calc_score(data):
     """
     """
-    RATE_CAPACITY = data['c'].max()
+    RATE_CAPACITY = 38.0#data['c'].max()
     
     data['score'] = data['c'] / RATE_CAPACITY
 
     return data
 
-def calc_feature_data(file_name):
+def calc_feature_data(file_name, data=None):
     """
     """
-    data = calc_feature(file_name)
+    data = calc_feature(file_name, data)
     data = calc_score(data)
     
     data_x = data[[i for i in data.columns if 'feature_' in i]]
@@ -74,12 +74,13 @@ def transfer_feature(data):
     
     return data
 
-def calc_feature(file_name):
+def calc_feature(file_name, data=None):
     """
     """
     print('---------------------------------------')
-    print(file_name)
-    data = pd.read_csv(file_name, encoding='gb18030')
+    if data is None:
+        print(file_name)
+        data = pd.read_csv(file_name, encoding='gb18030')
     print('data shape: ' + data.shape.__str__())
     
      #transfer the feature
@@ -152,7 +153,7 @@ def build_model(data_x, data_y, split_mode='test',
     return res
     
 def main():
-    state = 'discharge'
+    state = 'charge'
     file_dir = os.path.join(os.path.abspath('.'), 'data')
     file_name = os.path.join(os.path.join(file_dir, r'processed_%s_data.csv'%state))
     data_x, data_y = calc_feature_data(file_name)

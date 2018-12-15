@@ -6,7 +6,7 @@ Created on Fri Dec  7 10:00:21 2018
 @author: wuzhiqiang
 """
 print(__doc__)
-import read_data as ppd
+import read_data as rd
 import os
 import pandas as pd
 import numpy as np
@@ -56,7 +56,7 @@ def slip_data(df):
         data0 = data0.append(data)
     return data0
                 
-def preprocess_data(data_dir, filename, data0=None):
+def preprocess_data(data_dir, filename, cell_no, data0=None, file_type='csv'):
     """
     将预处理后的数据按一次充电过程进行分割合并
     """
@@ -64,8 +64,22 @@ def preprocess_data(data_dir, filename, data0=None):
     if data0 is None:
         file = os.path.join(data_dir, filename)
         start = time.time()
-        data0 = pd.read_csv(file+'.csv', encoding='gb18030')
+        if file_type == 'csv':
+            data0 = pd.read_csv(file+'.%s'%file_type, encoding='gb18030')
+        elif file_type =='excel':
+            data0 = pd.read_excel(file+'.xlsx', encoding='gb18030')
         end = time.time()
+        
+        #"""
+        data0 = data0.rename(columns={'time':'stime'})
+        rd.save_data_csv(data0, filename, data_dir)
+        #"""
+        #"""
+        #保存进sql
+        config = {'s': 'localhost', 'u': 'root', 'p': 'wzqsql', 'db': 'cell_lg36',
+                  'port': 3306}
+        rd.save_data_sql(data0, config, 'cell_'+cell_no)
+        #"""
         print('Done, it took %d seconds to read the data.'%(end-start))
     
     #filt samples on rows, if a row has too few none-nan value, drop it
@@ -88,6 +102,8 @@ def preprocess_data(data_dir, filename, data0=None):
                       %(cnt, j_last, j, len(cur_df)))
             j_last = j
             data = data.append(slip_data(cur_df))
+    data.insert(0, 'cell_no', cell_no)
+    data['start_time'] = data['start_time'].apply(str)
     data['start_time'] = data['start_time'].apply(lambda x: parser.parse(x))
     data = data.sort_values('start_time')
     #data['start_time'] = data['start_time'].apply(str)
@@ -102,8 +118,8 @@ def transfer_data(cnt, cur_df):
     """
     df = pd.DataFrame(columns=['start_time', 'end_time',
                                'data_num'])
-    df.loc[cnt, 'start_time'] = cur_df['time'].iloc[0]
-    df.loc[cnt, 'end_time'] = cur_df['time'].iloc[-1]
+    df.loc[cnt, 'start_time'] = cur_df['stime'].iloc[0]
+    df.loc[cnt, 'end_time'] = cur_df['stime'].iloc[-1]
     df.loc[cnt, 'data_num'] = len(cur_df)
     df.loc[cnt, 'c'] = cur_df['c'].iloc[-1]
     df.loc[cnt, 'e'] = cur_df['e'].iloc[-1]
@@ -138,7 +154,8 @@ def add_ocv_c(data):
     #静置时c等于上一次充/放电容量与后一次充/放电容量的均值
     #第一次及最后一次不计算
     """
-    data = data.drop(index=0, axis=1).drop(index=len(data)-1, axis=1)
+    if len(data) > 2:
+        data = data.drop(index=0, axis=1).drop(index=len(data)-1, axis=1)
     for i in data[data['c'] == 0].index:
         data['c'].loc[i] = 0.5 * (data['c'].loc[i-1] + data['c'].loc[i+1])
         data['e'].loc[i] = 0.5 * (data['e'].loc[i-1] + data['e'].loc[i+1])
@@ -146,21 +163,21 @@ def add_ocv_c(data):
 
 def main():
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '29'
-    temperature = '35'
+    cell_no = '15'
+    temperature = '25'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
     """
     data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
     data_ori = ppd.read_data(data_ori_dir, cell_no, temperature)
     data = ppd.clean_data(data_ori)
-    ppd.save_data_csv(data, filename, data_dir, 500000)
+    rd.save_data_csv(data, filename, data_dir, 500000)
     """
-    """
-    data = preprocess_data(data_dir, filename)
-    ppd.save_data_csv(data, 'processed_'+filename, data_dir)
-    """
-    ppd.save_workstate_data(r'processed_LG36-\d+-\d+_\d-\d+.csv', data_dir)
+   # """
+    data = preprocess_data(data_dir, filename, cell_no)
+    rd.save_data_csv(data, 'processed_'+filename, data_dir)
+    #"""
+    #rd.save_workstate_data(r'processed_LG36-\d+-\d+_\d-\d+.csv', data_dir)
     
 if __name__ == '__main__':
     main()
