@@ -97,10 +97,11 @@ def preprocess_data(data_dir, filename, cell_no, data0=None, file_type='csv'):
             else:
                 bias = data0['cycle_no'].iloc[j_last - 1]
             cur_df = data0.iloc[j_last:j]  
-            cur_df['cycle_no'] = cur_df['cycle_no'] + bias      
-            print('clip %d : j: %d -> %d, the length of cur_df: %d.'
+            cur_df['cycle_no'] = cur_df['cycle_no'] + bias
+            print('clip %d : j: %d -> %d, the length of current_df: %d.'
                       %(cnt, j_last, j, len(cur_df)))
             j_last = j
+            cnt += cnt
             data = data.append(slip_data(cur_df))
     data.insert(0, 'cell_no', cell_no)
     data['start_time'] = data['start_time'].apply(str)
@@ -163,17 +164,17 @@ def add_ocv_c(data):
 
 def main():
     data_dir = os.path.join(os.path.abspath('.'), 'data')
-    cell_no = '15'
-    temperature = '25'
+    cell_no = '29'
+    temperature = '35'
     cycle = '0-1000'
     filename = 'LG36-%s-%s_%s'%(temperature, cell_no, cycle)
     """
-    data_ori_dir = os.path.normpath('/Users/admin/Documents/data/电池数据')
-    data_ori = ppd.read_data(data_ori_dir, cell_no, temperature)
-    data = ppd.clean_data(data_ori)
+    data_ori_dir = os.path.normpath('/Volumes/Elements/data/电池数据')#('/Users/admin/Documents/data/电池数据')
+    data_ori = rd.read_data(data_ori_dir, cell_no, temperature)
+    data = rd.clean_data(data_ori)
     rd.save_data_csv(data, filename, data_dir, 500000)
     """
-   # """
+    #"""
     data = preprocess_data(data_dir, filename, cell_no)
     rd.save_data_csv(data, 'processed_'+filename, data_dir)
     #"""

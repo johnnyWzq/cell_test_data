@@ -28,14 +28,14 @@ def get_score_data(file_name, cell_no):
     
 def get_score(score_data, mode='fixed'):
     if mode == 'fixed':
-        index = 2
+        index = 100
     elif mode == 'random':
         index = random.randint(0, len(score_data))
     score = score_data['c'].iloc[index]
     start_time, end_time = get_time(score_data, index)
     return score, start_time, end_time
         
-def get_cell_data(config, cell_no, start_time, end_time, **kwg):
+def get_cell_data(config, cell_no, start_time, end_time, x='0', **kwg):
     """
     #kwg包含数据切片要求
     #interval 数据点数量
@@ -65,8 +65,8 @@ def get_cell_data(config, cell_no, start_time, end_time, **kwg):
             index['default'] = 0
         for key, value in index.items():
             for k, v in interval.items():
-                v = min(len(df), v)
-                data_dict[key+'_'+k] = df[value:(value+v)].copy(deep=True)
+                v = min((len(df)-value), v)
+                data_dict[key+'_'+k+x] = df[value:(value+v)].copy(deep=True)
         return data_dict
     else:
          return None
@@ -79,41 +79,76 @@ def get_slip_index(soc, total_num):
     index = total_num * 100 // soc
     return index
 
-def get_x_y_data(data_dict):
+def generate_data(raw_data):
     """
     """
-    
-def main():
-    state = 'discharge'
+    state = 'rest'
     file_dir = os.path.join(os.path.abspath('.'), 'data')
     file_name = r'processed_%s_data'%state
     cell_no = '15'
     config = {'s': 'localhost', 'u': 'root', 'p': 'wzqsql', 'db': 'cell_lg36',
                   'port': 3306}
-    index_list = {'100soc':0, '90soc':300, '80soc':600, '70soc':900, '60soc':1200}
-    interval_list = {'5mins':300, '10mins':600}
+    index_list = {'100soc':0, '90soc':300, '80soc':600, '70soc':900, '60soc':1200, '50soc':1500}
+    interval_list = {'5mins':300, '10mins':600, '20mims':1200, '30mins':1800, '60mins':3000}
+    #index_list = {'100soc':1500}
+    #interval_list = {'60mins':3000}
     score_data = get_score_data(os.path.join(file_dir, file_name), cell_no)
-    score, start_time, end_time = get_score(score_data)
-    data_dict = get_cell_data(config, cell_no, start_time, end_time,
+    score, start_time, end_time = get_score(score_data, mode='random')
+    print(score, start_time, end_time)
+    data_dict = get_cell_data(config, cell_no, start_time, end_time, x='-1',
                               interval=interval_list, index=index_list)
     df = pd.DataFrame()
     for key, value in data_dict.items():
         #
-        data = ppd.preprocess_data(file_dir, 'valid_'+file_name, cell_no, data0=value)
-        data['c'] = score
-        df = df.append(data)
-    rd.save_data_csv(df, 'valid_'+file_name, file_dir)
-    file_name = os.path.join(file_dir, r'valid_processed_%s_data.csv'%state)
-    data_x, data_y = bm.calc_feature_data(file_name, data=df)
-    model_dir = os.path.join(os.path.abspath('.'), '%s_pkl'%state)
-    model_name = 'GradientBoostingRegressor.pkl'
-    model_name = os.path.join(model_dir, model_name)
-    model = ut.load_model(model_name)
-    res = ut.valid_model(model, data_x, data_y, feature_method='f_regression')
-    res.index = data_dict.keys()
-    print(res)
-    output = os.path.join(os.path.join(os.path.abspath('.'), 'result'), 'vaild_%s_result.csv'%state)
-    res.to_csv(output, mode='a', encoding='gb18030')
-
+        if len(value) > 0:
+            data = ppd.preprocess_data(file_dir, 'valid_'+file_name, cell_no, data0=value)
+            data['c'] = score
+            df = df.append(data)
+    
+def main():
+    for i in range(20):
+        state = 'rest'
+        file_dir = os.path.join(os.path.abspath('.'), 'data')
+        file_name = r'processed_%s_data'%state
+        cell_no = '15'
+        config = {'s': 'localhost', 'u': 'root', 'p': 'wzqsql', 'db': 'cell_lg36',
+                      'port': 3306}
+        index_list = {'100soc':0, '90soc':300, '80soc':600, '70soc':900, '60soc':1200, '50soc':1500}
+        interval_list = {'5mins':300, '10mins':600, '20mims':1200, '30mins':1800, '60mins':3000}
+        #index_list = {'100soc':1500}
+        #interval_list = {'60mins':3000}
+        score_data = get_score_data(os.path.join(file_dir, file_name), cell_no)
+        score, start_time, end_time = get_score(score_data, mode='random')
+        print(score, start_time, end_time)
+        data_dict = get_cell_data(config, cell_no, start_time, end_time, x='-1',
+                                  interval=interval_list, index=index_list)
+        df = pd.DataFrame()
+        for key, value in data_dict.items():
+            #
+            if len(value) > 0:
+                data = ppd.preprocess_data(file_dir, 'valid_'+file_name, cell_no, data0=value)
+                data['c'] = score
+                df = df.append(data)
+        
+        rd.save_data_csv(df, 'valid_'+file_name, file_dir)
+        
+        file_name = os.path.join(file_dir, r'valid_processed_%s_data.csv'%state)
+        data_x, data_y = bm.calc_feature_data(file_name, data=df)
+        model_dir = os.path.join(os.path.abspath('.'), '%s_pkl'%state)
+        model_name = 'GradientBoostingRegressor.pkl'
+        model_name = os.path.join(model_dir, model_name)
+        model = ut.load_model(model_name)
+        print(model)
+        data_x, data_y = ut.add_min_max(data_x, data_y, os.path.join(model_dir, 'min_max.csv'))
+        res = ut.valid_model(model, data_x, data_y, feature_method='f_regression')
+        res.index = data_dict.keys()
+        print(res)
+        output = os.path.join(os.path.join(os.path.abspath('.'), 'result'), 'vaild_%s_result.csv'%state)
+        res.to_csv(output, mode='a', encoding='gb18030')
+    """
+    data_x, data_y = bm.calc_feature_data(os.path.join(os.path.join(file_dir, r'processed_%s_data.csv'%state)))
+    res0 = ut.valid_model(model, data_x, data_y, feature_method='f_regression')
+    print(res0)
+    """
 if __name__ == '__main__':
     main()

@@ -25,13 +25,21 @@ from sklearn.metrics import r2_score
 from sklearn.externals import joblib
 from sklearn import tree
 from sklearn import preprocessing
+from sklearn.preprocessing import MinMaxScaler
 
-def select_feature(data_x, data_y, feature_num=40, method='f_regression'):
+def select_feature(data_x, data_y, feature_num=100, method='f_regression'):
     features_chosen = data_x.columns
     feature_num = min(len(features_chosen), feature_num)
     
      # standardize
-    data_x = pd.DataFrame(data=preprocessing.scale(data_x.values, axis=0), columns=data_x.columns)
+    """
+    min_max = pd.DataFrame([data_x.min(), data_x.max()])
+    scaler = MinMaxScaler(feature_range=(-1,1))
+    print(scaler.fit(data_x.values))
+    data_x = pd.DataFrame(data=scaler.transform(data_x.values), columns=data_x.columns)
+    """
+    min_max = None
+    #data_x = pd.DataFrame(data=preprocessing.Scaler(data_x.values, axis=0), columns=data_x.columns)
     #根据特征工程的方法选择特征参数数量
     from sklearn.feature_selection import SelectKBest
     from sklearn.feature_selection import f_regression
@@ -56,7 +64,7 @@ def select_feature(data_x, data_y, feature_num=40, method='f_regression'):
     else:
         raise Exception('In select_feature(): invalid parameter method.')
     
-    return data_x
+    return data_x, min_max
 
 def evaluate(model, X, trueY):
     """
@@ -149,9 +157,10 @@ def load_model(model_name):
     model = joblib.load(model_name)
     return model
 
-def valid_model(model, data_x, data_y, feature_method, feature_num=40):
-    data_x = select_feature(data_x, data_y, method=feature_method, feature_num=feature_num)
-    
+def valid_model(model, data_x, data_y, feature_method, feature_num=100):
+    data_x, min_max = select_feature(data_x, data_y, method=feature_method, feature_num=feature_num)#min_max no uses
+    data_x = data_x[0:-2]
+    data_y = data_y[0:-2]
     # start building model
     np_x = np.nan_to_num(data_x.values)
     np_y = np.nan_to_num(data_y.values)
@@ -161,3 +170,9 @@ def valid_model(model, data_x, data_y, feature_method, feature_num=40):
     print('----------------------------------------')
     res = pd.DataFrame({'test:true_y': np_y, 'test:pred_y': model.predict(np_x)})
     return res
+
+def add_min_max(data_x, data_y, file_name):
+    min_max = pd.read_csv(file_name, encoding='gb18030')
+    data_x = data_x.append(min_max)
+    data_y = data_y.append(pd.Series([data_y.min(), data_y.max()]))
+    return data_x, data_y
