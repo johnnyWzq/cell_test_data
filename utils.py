@@ -32,13 +32,14 @@ def select_feature(data_x, data_y, feature_num=100, method='f_regression'):
     feature_num = min(len(features_chosen), feature_num)
     
      # standardize
-    """
+    #"""
     min_max = pd.DataFrame([data_x.min(), data_x.max()])
+    """
     scaler = MinMaxScaler(feature_range=(-1,1))
     print(scaler.fit(data_x.values))
     data_x = pd.DataFrame(data=scaler.transform(data_x.values), columns=data_x.columns)
     """
-    min_max = None
+    #min_max = None
     #data_x = pd.DataFrame(data=preprocessing.Scaler(data_x.values, axis=0), columns=data_x.columns)
     #根据特征工程的方法选择特征参数数量
     from sklearn.feature_selection import SelectKBest
@@ -54,7 +55,7 @@ def select_feature(data_x, data_y, feature_num=100, method='f_regression'):
         select_model.fit(data_x.values, data_y.values.ravel())
         feature_mask = select_model.get_support(indices=True)
         feature_chosen = data_x.columns[feature_mask]
-        print('feature_chosen: ', feature_chosen)
+        #print('feature_chosen: ', feature_chosen)
         data_x = data_x[feature_chosen]
     elif method == 'PCA':
         pca_model = PCA(n_components=feature_num)

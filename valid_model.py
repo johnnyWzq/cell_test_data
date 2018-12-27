@@ -107,7 +107,7 @@ def generate_data(raw_data):
     
 def main():
     for i in range(20):
-        state = 'rest'
+        state = 'charge'
         file_dir = os.path.join(os.path.abspath('.'), 'data')
         file_name = r'processed_%s_data'%state
         cell_no = '15'
@@ -120,7 +120,7 @@ def main():
         score_data = get_score_data(os.path.join(file_dir, file_name), cell_no)
         score, start_time, end_time = get_score(score_data, mode='random')
         print(score, start_time, end_time)
-        data_dict = get_cell_data(config, cell_no, start_time, end_time, x='-1',
+        data_dict = get_cell_data(config, cell_no, start_time, end_time, x='0',
                                   interval=interval_list, index=index_list)
         df = pd.DataFrame()
         for key, value in data_dict.items():
@@ -134,8 +134,8 @@ def main():
         
         file_name = os.path.join(file_dir, r'valid_processed_%s_data.csv'%state)
         data_x, data_y = bm.calc_feature_data(file_name, data=df)
-        model_dir = os.path.join(os.path.abspath('.'), '%s_pkl'%state)
-        model_name = 'GradientBoostingRegressor.pkl'
+        model_dir = os.path.join(os.path.abspath('.'), '%s_g_pkl'%state)
+        model_name = 'RandomForestRegressor.pkl'
         model_name = os.path.join(model_dir, model_name)
         model = ut.load_model(model_name)
         print(model)
@@ -143,7 +143,7 @@ def main():
         res = ut.valid_model(model, data_x, data_y, feature_method='f_regression')
         res.index = data_dict.keys()
         print(res)
-        output = os.path.join(os.path.join(os.path.abspath('.'), 'result'), 'vaild_%s_result.csv'%state)
+        output = os.path.join(os.path.join(os.path.abspath('.'), 'g_result'), 'vaild_%s_result.csv'%state)
         res.to_csv(output, mode='a', encoding='gb18030')
     """
     data_x, data_y = bm.calc_feature_data(os.path.join(os.path.join(file_dir, r'processed_%s_data.csv'%state)))

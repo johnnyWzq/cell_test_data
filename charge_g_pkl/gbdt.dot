@@ -1,0 +1,32 @@
+digraph Tree {
+node [shape=box] ;
+0 [label="feature_current_max <= 0.487\nfriedman_mse = 0.002\nsamples = 216160\nvalue = -0.0"] ;
+1 [label="feature_current_diffrate_mean <= -0.002\nfriedman_mse = 0.007\nsamples = 8893\nvalue = -0.091"] ;
+0 -> 1 [labeldistance=2.5, labelangle=45, headlabel="True"] ;
+2 [label="feature_current_min <= 0.078\nfriedman_mse = 0.002\nsamples = 3723\nvalue = -0.0"] ;
+1 -> 2 ;
+3 [label="friedman_mse = 0.001\nsamples = 3481\nvalue = 0.004"] ;
+2 -> 3 ;
+4 [label="friedman_mse = 0.002\nsamples = 242\nvalue = -0.055"] ;
+2 -> 4 ;
+5 [label="feature_voltage_min <= 1.122\nfriedman_mse = 0.001\nsamples = 5170\nvalue = -0.156"] ;
+1 -> 5 ;
+6 [label="friedman_mse = 0.0\nsamples = 4670\nvalue = -0.161"] ;
+5 -> 6 ;
+7 [label="friedman_mse = 0.002\nsamples = 500\nvalue = -0.113"] ;
+5 -> 7 ;
+8 [label="feature_dqdv_diff2_std <= 26417.184\nfriedman_mse = 0.002\nsamples = 207267\nvalue = 0.004"] ;
+0 -> 8 [labeldistance=2.5, labelangle=-45, headlabel="False"] ;
+9 [label="feature_dqdv_diff_min <= -12461.98\nfriedman_mse = 0.002\nsamples = 138109\nvalue = -0.003"] ;
+8 -> 9 ;
+10 [label="friedman_mse = 0.002\nsamples = 138091\nvalue = -0.003"] ;
+9 -> 10 ;
+11 [label="friedman_mse = -0.0\nsamples = 18\nvalue = -0.831"] ;
+9 -> 11 ;
+12 [label="feature_current_median <= 0.973\nfriedman_mse = 0.001\nsamples = 69158\nvalue = 0.017"] ;
+8 -> 12 ;
+13 [label="friedman_mse = 0.001\nsamples = 30670\nvalue = 0.024"] ;
+12 -> 13 ;
+14 [label="friedman_mse = 0.001\nsamples = 38488\nvalue = 0.013"] ;
+12 -> 14 ;
+}

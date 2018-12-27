@@ -162,18 +162,18 @@ def build_model(data_x, data_y, split_mode='test',
 
     res = {}
     if split_mode == 'test':
-        x_train, x_val, y_train, y_val = train_test_split(data_x, data_y, test_size=0.3,
-                                                          shuffle=False)
+        x_train, x_val, y_train, y_val = train_test_split(data_x, data_y, test_size=0.2,
+                                                          shuffle=True)
         model = LinearRegression()
         res['lr'] = ut.test_model(model, x_train, x_val, y_train, y_val)
         ut.save_model(model, data_x.columns, pkl_dir)
         model = DecisionTreeRegressor()
         res['dt'] = ut.test_model(model, x_train, x_val, y_train, y_val)
         ut.save_model(model, data_x.columns, pkl_dir, depth=3)
-        model = RandomForestRegressor(min_samples_split=2)
+        model = RandomForestRegressor()
         res['rf'] = ut.test_model(model, x_train, x_val, y_train, y_val)
         ut.save_model(model, data_x.columns, pkl_dir, depth=3)
-        model = GradientBoostingRegressor(max_depth=2)
+        model = GradientBoostingRegressor()
         res['gbdt'] = ut.test_model(model, x_train, x_val, y_train, y_val)
         ut.save_model(model, data_x.columns, pkl_dir)
     elif split_mode == 'cv':
@@ -211,6 +211,7 @@ def main():
             eva = eva.append(res[s]['eva'])
         eva = eva[['type', 'EVS', 'MAE', 'MSE', 'R2']]
         eva.to_excel(writer, d['eva'])
+        
     """    
     model_dir = os.path.join(os.path.abspath('.'), '%s_pkl'%state)
     model_name = 'GradientBoostingRegressor.pkl'

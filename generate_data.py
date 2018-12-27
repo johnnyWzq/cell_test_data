@@ -92,7 +92,7 @@ def generate_data(raw_data, config):
     return raw_data
     
 def main():
-    state = 'discharge'
+    state = 'charge'
     file_dir = os.path.join(os.path.abspath('.'), 'data')
     file_name = r'processed_%s_data'%state
     config = {'s': 'localhost', 'u': 'root', 'p': 'wzqsql', 'db': 'cell_lg36',
