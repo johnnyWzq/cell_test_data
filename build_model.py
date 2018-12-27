@@ -38,6 +38,8 @@ def calc_feature_data(file_name, data=None):
     data = data[data['score'] > 0.1]
     
     data_x = data[[i for i in data.columns if 'feature_' in i]]
+    #将电流特征去掉
+    data_x = data_x.drop([i for i in data.columns if '_current_' in i], axis=1)
     data_y = data['score']
     
     return data_x, data_y
@@ -191,7 +193,7 @@ def build_model(data_x, data_y, split_mode='test',
     return res
     
 def main():
-    state = 'discharge'
+    state = 'charge'
     file_dir = os.path.join(os.path.abspath('.'), 'data')
     file_name = os.path.join(os.path.join(file_dir, r'scale_processed_%s_data.csv'%state))
     data_x, data_y = calc_feature_data(file_name)

@@ -8,7 +8,7 @@ Created on Mon Dec 24 10:31:00 2018
 import os
 import pandas as pd
 
-state = 'charge'
+state = 'discharge'
 file_dir = os.path.join(os.path.abspath('.'), 'data')
 file_name = os.path.join(os.path.join(file_dir, r'scale_processed_%s_data.csv'%state))
 result_dir = os.path.join(os.path.abspath('.'), 'g_result')
