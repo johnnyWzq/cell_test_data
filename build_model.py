@@ -12,6 +12,7 @@ import os
 import pandas as pd
 import numpy as np
 import utils as ut
+import read_data as rd
 
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
@@ -30,13 +31,14 @@ def calc_score(data):
 
     return data
 
-def calc_feature_data(file_name, data=None):
+def calc_feature_data(file_dir, file_name, data=None):
     """
     """
-    data = calc_feature(file_name, data)
+    data = calc_feature(file_dir, file_name, data)
     data = calc_score(data)
     data = data[data['score'] > 0.1]
     
+    print('getting the feature...')
     data_x = data[[i for i in data.columns if 'feature_' in i]]
     #将电流特征去掉
     data_x = data_x.drop([i for i in data.columns if '_current_' in i], axis=1)
@@ -48,6 +50,7 @@ def transfer_feature(data):
     """
     curr-c_rate,voltage-v_rate,T-T_refer
     """
+    print('normalizating the data... ')
     C_RATE = 37
     V_RATE = 3.7
     T_REFER = 20
@@ -113,13 +116,14 @@ def transfer_feature(data):
     
     return data
 
-def calc_feature(file_name, data=None):
+def calc_feature(file_dir, file_name, data=None):
     """
     """
     print('---------------------------------------')
     if data is None:
         print(file_name)
-        data = pd.read_csv(file_name, encoding='gb18030')
+        file = os.path.join(os.path.join(file_dir, file_name))
+        data = pd.read_csv(file, encoding='gb18030')
     print('data shape: ' + data.shape.__str__())
     
      #transfer the feature
@@ -193,12 +197,13 @@ def build_model(data_x, data_y, split_mode='test',
     return res
     
 def main():
-    state = 'charge'
+    state = 'discharge'
     file_dir = os.path.join(os.path.abspath('.'), 'data')
-    file_name = os.path.join(os.path.join(file_dir, r'scale_processed_%s_data.csv'%state))
-    data_x, data_y = calc_feature_data(file_name)
-    #feature_data.to_excel(os.path.join(file_dir, 'feature_data.xlsx'))
+    file_name = r'scale_processed_%s_data.csv'%state
     pkl_dir = os.path.join(os.path.abspath('.'), '%s_g_pkl'%state)
+    data_x, data_y = calc_feature_data(file_dir, file_name)
+
+    rd.save_data_csv(data_x.head(), 'columns_feature_'+file_name[:-4], pkl_dir)
     mode = 'test'
     res = build_model(data_x, data_y, split_mode=mode, feature_method='f_regression', pkl_dir=pkl_dir)
     if mode == 'test':

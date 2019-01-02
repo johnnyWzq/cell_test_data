@@ -177,7 +177,6 @@ def main():
     #"""
     data = preprocess_data(data_dir, filename, cell_no)
     rd.save_data_csv(data, 'processed_'+filename, data_dir)
-    rd.head().save_data_csv(data, 'columns_processed_'+filename, data_dir)
     #"""
     #rd.save_workstate_data(r'processed_LG36-\d+-\d+_\d-\d+.csv', data_dir)
     
